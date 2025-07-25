@@ -1,4 +1,5 @@
 require('dotenv').config();
+const axios = require('axios');
 const stripe = require('stripe')(process.env.STRIPE_API_KEY);
 const express = require('express');
 const cors = require('cors');
@@ -6,10 +7,24 @@ const app = express();
 app.use(cors({
   origin: process.env.ORIGIN
 }));
+app.set('trust proxy', true);
 app.use(express.static('public'));
 
 app.get('/test-45dfg5345fg', (req, res) => {
   res.send('Ok');
+});
+
+app.get('/user-data', async (req, res) => {
+  const { data, status } = await axios.get(`https://api.ipinfo.io/lite/${req.ip}?token=323c86741dda64`);
+
+  if (status === 200 && data.country_code) {
+    return res.status(200).json({
+      ip: data.ip,
+      country_code: data.country_code
+    });
+  }
+
+  res.sendStatus(400);
 });
 
 app.post('/create-checkout-session', async (req, res) => {
@@ -26,7 +41,7 @@ app.post('/create-checkout-session', async (req, res) => {
     return_url: `${process.env.ORIGIN}/onboarding/deposit/complete?session_id={CHECKOUT_SESSION_ID}`,
   });
 
-  res.send({clientSecret: session.client_secret});
+  res.send({ clientSecret: session.client_secret });
 });
 
 app.get('/session-status', async (req, res) => {
